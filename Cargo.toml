@@ -8,3 +8,6 @@ edition = "2018"
 
 [dev-dependencies]
 image = "0.23.14"
+
+[dependencies]
+rayon = "1.5.1"

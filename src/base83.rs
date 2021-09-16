@@ -1,4 +1,4 @@
-use crate::Error;
+use super::Error;
 
 static CHARACTERS: [u8; 83] = [
     b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'A', b'B', b'C', b'D', b'E', b'F',
@@ -15,6 +15,7 @@ pub fn encode(value: u32, length: u32) -> String {
 
     for i in 1..=length {
         let digit: u32 = (value / u32::pow(83, length - i)) % 83;
+
         result.push(CHARACTERS[digit as usize] as char);
     }
 

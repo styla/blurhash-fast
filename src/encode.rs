@@ -1,5 +1,8 @@
-use crate::{alternating_current, base83, direct_current};
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
+use super::{alternating_current, base83, direct_current};
 use super::Error;
 use super::util::multiply_basis_function;
 
@@ -17,22 +20,28 @@ pub fn encode(
         return Err(Error::ComponentsOutOfRange);
     }
 
-    let mut factors: Vec<[f32; 3]> = Vec::new();
-
-    for y in 0..components_y {
-        for x in 0..components_x {
-            let factor =
-                multiply_basis_function(
-                    x,
-                    y,
-                    width,
-                    height,
-                    rgba_image,
-                );
-
-            factors.push(factor);
-        }
-    }
+    let factors: Vec<[f32; 3]> = (0..components_y)
+        .into_par_iter()
+        .map(
+            |y| {
+                (0..components_x)
+                    .into_par_iter()
+                    .map(
+                        |x| {
+                            multiply_basis_function(
+                                x,
+                                y,
+                                width,
+                                height,
+                                rgba_image,
+                            )
+                        }
+                    )
+                    .collect::<Vec<[f32; 3]>>()
+            }
+        )
+        .flatten()
+        .collect();
 
     let dc = factors[0];
     let ac = &factors[1..];

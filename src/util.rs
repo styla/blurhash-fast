@@ -1,7 +1,10 @@
 use std::f32::consts::PI;
 
-use crate::base83;
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
+use super::base83;
 use super::Error;
 
 /// linear 0.0-1.0 floating point to srgb 0-255 integer conversion.
@@ -28,6 +31,7 @@ pub fn srgb_to_linear(value: u32) -> f32 {
     }
 }
 
+#[inline(always)]
 fn sign(n: f32) -> f32 {
     if n < 0. {
         -1.
@@ -36,10 +40,12 @@ fn sign(n: f32) -> f32 {
     }
 }
 
+#[inline(always)]
 pub fn sign_pow(val: f32, exp: f32) -> f32 {
     sign(val) * f32::powf(val.abs(), exp)
 }
 
+#[inline(always)]
 pub fn extract_hash_dimensions(blurhash: &str) -> Result<(usize, usize), Error> {
     if blurhash.len() < 6 {
         return Err(Error::HashTooShort);
@@ -75,10 +81,6 @@ pub fn multiply_basis_function(
     height: u32,
     rgb: &[u8],
 ) -> [f32; 3] {
-    let mut r = 0.;
-    let mut g = 0.;
-    let mut b = 0.;
-
     let normalisation =
         match (component_x, component_y) {
             (0, 0) => 1.,
@@ -87,16 +89,32 @@ pub fn multiply_basis_function(
 
     let bytes_per_row = width * 4;
 
-    for y in 0..height {
-        for x in 0..width {
-            let basis = f32::cos(PI * component_x as f32 * x as f32 / width as f32)
-                * f32::cos(PI * component_y as f32 * y as f32 / height as f32);
+    let (mut r, mut g, mut b) =
+        (0..height)
+            .into_par_iter()
+            .map(
+                |row| {
+                    (0..width)
+                        .into_par_iter()
+                        .map(
+                            |column| {
+                                let basis =
+                                    f32::cos(PI * component_x as f32 * column as f32 / width as f32)
+                                        * f32::cos(PI * component_y as f32 * row as f32 / height as f32);
 
-            r += basis * srgb_to_linear(u32::from(rgb[(4 * x + y * bytes_per_row) as usize]));
-            g += basis * srgb_to_linear(u32::from(rgb[(4 * x + 1 + y * bytes_per_row) as usize]));
-            b += basis * srgb_to_linear(u32::from(rgb[(4 * x + 2 + y * bytes_per_row) as usize]));
-        }
-    }
+                                (
+                                    basis * srgb_to_linear(u32::from(rgb[(4 * column + row * bytes_per_row) as usize])),
+                                    basis * srgb_to_linear(u32::from(rgb[(4 * column + 1 + row * bytes_per_row) as usize])),
+                                    basis * srgb_to_linear(u32::from(rgb[(4 * column + 2 + row * bytes_per_row) as usize])),
+                                )
+                            },
+                        )
+                        .reduce_with(|a, b| (a.0 + b.0, a.1 + b.1, a.2 + b.2))
+                        .unwrap()
+                },
+            )
+            .reduce_with(|a, b| (a.0 + b.0, a.1 + b.1, a.2 + b.2))
+            .unwrap();
 
     let scale =
         normalisation / (width * height) as f32;
