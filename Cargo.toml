@@ -1,9 +1,10 @@
 [package]
-name = "blurhash-rs"
+name = "blurhash-fast"
 description = "blurhash"
 readme = "README.md"
 version = "0.1.0"
 authors = ["Kenan Sulayman <kenan@styla.com>"]
+license-file = "license"
 edition = "2018"
 
 [dev-dependencies]
