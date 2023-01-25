@@ -7,7 +7,7 @@
     crates.io
   </a>
   —
-  <a href="https://github.com/styla/blurhash-rust-fast">
+  <a href="https://github.com/styla/blurhash-fast">
     Github
   </a>
 </div>
